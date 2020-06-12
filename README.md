@@ -24,8 +24,9 @@ let add = fn(x, y) {
 let result = add(five, ten)
 ```
 
-## Directory layout
 
+## Memo
 
-
-
+* 字句解析
+  * ソースコード --(字句解析)--> トークン列 ---(構文解析)--> 抽象構文木
+  * 字句解析＝lexer

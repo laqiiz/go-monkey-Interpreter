@@ -1,26 +1,25 @@
 package token
 
-type TokenType string
+type Type string
 
 type Token struct {
-	Type    TokenType
+	Type Type
 	Literal string
 }
 
 const (
 	ILLEGAL = "ILLEGAL"
-	EOF     = "EOF" // end of file
+	EOF = "EOF"
 
-	// 識別子 + literal
-	IDENT = "IDENT" // add, foobar, x,y, ...
-	INT   = "INT"
+	IDENT = "IDENT" // add, foobar, x, y, ...
+	INT = "INT"
 
-	// operator
+	// 演算子
 	ASSIGN = "="
-	PLUS   = "+"
+	PLUS = "+"
 
 	// delimiter
-	COMMA     = ","
+	COMMA = ","
 	SEMICOLON = ";"
 
 	LPAREN = "("
@@ -28,7 +27,7 @@ const (
 	LBRACE = "{"
 	RBRACE = "}"
 
-	// Keyword
+	// keyword
 	FUNCTION = "FUNCTION"
-	LET      = "LET"
+	LET = "LET"
 )
