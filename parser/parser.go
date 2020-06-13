@@ -55,6 +55,8 @@ func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case token.LET:
 		return p.parseLetStatement()
+	case token.RETURN:
+		return p.parseReturnStatement()
 	default:
 		return nil
 	}
@@ -105,4 +107,20 @@ func (p *Parser) expectPeek(t token.Type) bool {
 func (p *Parser) peekError(t token.Type) {
 	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
 	p.errors = append(p.errors, msg)
+}
+
+func (p *Parser) parseReturnStatement() ast.Statement {
+	stmt := &ast.ReturnStatement{Token: p.curToken}
+	p.nextToken()
+
+	// TODO セミコロンまで読み飛ばし
+	for !p.curTokenIs(token.SEMICOLON) {
+		p.nextToken()
+
+		if p.curTokenIs(token.EOF) {
+			p.peekError(token.SEMICOLON) // セミコロンが存在しない
+			return stmt
+		}
+	}
+	return stmt
 }
