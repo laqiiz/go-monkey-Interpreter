@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/laqiiz/go-monkey-Interpreter/ast"
 	"github.com/laqiiz/go-monkey-Interpreter/lexer"
 	"github.com/laqiiz/go-monkey-Interpreter/token"
@@ -10,10 +11,15 @@ type Parser struct {
 	l         *lexer.Lexer // 字句解析器インスタンスへのポインタ
 	curToken  token.Token  // 現在のトークン
 	peekToken token.Token  // 次のトークン(curTokenで不足時にはpeekTokenを用いる）
+
+	errors []string
 }
 
 func New(l *lexer.Lexer) *Parser {
-	p := &Parser{l: l}
+	p := &Parser{
+		l:      l,
+		errors: []string{},
+	}
 
 	p.nextToken()
 	p.nextToken()
@@ -27,7 +33,7 @@ func (p *Parser) nextToken() {
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
-	pgm :=&ast.Program{}
+	pgm := &ast.Program{}
 	pgm.Statements = []ast.Statement{}
 
 	for p.curToken.Type != token.EOF {
@@ -41,6 +47,9 @@ func (p *Parser) ParseProgram() *ast.Program {
 	return pgm
 }
 
+func (p *Parser) Errors() []string {
+	return p.errors
+}
 
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
@@ -51,7 +60,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	}
 }
 
-func (p Parser) parseLetStatement() ast.Statement {
+func (p *Parser) parseLetStatement() ast.Statement {
 	stmt := &ast.LetStatement{
 		Token: p.curToken,
 	}
@@ -89,6 +98,11 @@ func (p *Parser) expectPeek(t token.Type) bool {
 		p.nextToken()
 		return true
 	}
+	p.peekError(t)
 	return false
 }
 
+func (p *Parser) peekError(t token.Type) {
+	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
+	p.errors = append(p.errors, msg)
+}

@@ -19,9 +19,7 @@ let foobar = 838383;
 	p := New(lexer.New(in))
 
 	pgm := p.ParseProgram()
-	if pgm == nil {
-		t.Fatalf("ParseProgram() return nil")
-	}
+	checkParserErrors(t, p)
 
 	if len(pgm.Statements) != 3 {
 		t.Fatalf("program.Statements does not countain 3 statements got=%d", len(pgm.Statements))
@@ -29,7 +27,7 @@ let foobar = 838383;
 
 	tests := []struct {
 		wantIdentifier string
-	} {
+	}{
 		{"x"},
 		{"y"},
 		{"foobar"},
@@ -44,6 +42,19 @@ let foobar = 838383;
 		})
 	}
 
+}
+
+func checkParserErrors(t *testing.T, p *Parser) {
+	errors := p.errors
+	if len(errors) == 0 {
+		return
+	}
+
+	t.Errorf("parser has %d errors", len(errors))
+	for _, msg := range errors {
+		t.Errorf("parser error: %q", msg)
+	}
+	t.FailNow()
 }
 
 func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
@@ -69,5 +80,4 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	}
 
 	return true
-
 }
