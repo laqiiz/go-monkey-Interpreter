@@ -44,6 +44,8 @@ let foobar = 838383;
 }
 
 func checkParserErrors(t *testing.T, p *Parser) {
+	t.Helper() // エラー部分が分かりにくかったので追加
+
 	errors := p.errors
 	if len(errors) == 0 {
 		return
@@ -141,7 +143,7 @@ func TestIdentifierExpression(t *testing.T) {
 func TestIntegerLiteralExpression(t *testing.T) {
 	in := "5;"
 	p := New(lexer.New(in))
-	pgm:= p.ParseProgram()
+	pgm := p.ParseProgram()
 	checkParserErrors(t, p)
 
 	if len(pgm.Statements) != 1 {
@@ -164,4 +166,64 @@ func TestIntegerLiteralExpression(t *testing.T) {
 		t.Errorf("literal.TokenLiteral not %s. got=%s", "5", literal.TokenLiteral())
 	}
 
+}
+
+func TestParsingPrefixExpressions(t *testing.T) {
+	prefixTests := []struct {
+		in       string
+		ope      string
+		integerV int64
+	}{
+		{"!5;", "!", 5},
+		{"-15", "-", 15},
+	}
+
+	for _, tt := range prefixTests {
+		l := lexer.New(tt.in)
+		p := New(l)
+		pgm := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		if len(pgm.Statements) != 1 {
+			t.Fatalf("pgm.Statemtns does not contain %d statements. got=%d\n", 1, len(pgm.Statements))
+		}
+
+		stmt, ok := pgm.Statements[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Fatalf("pgm.Statements[0] is not ast.ExpressionStatement. got=%T", pgm.Statements[0])
+		}
+
+		exp, ok := stmt.Expression.(*ast.PrefixExpression)
+		if !ok {
+			t.Fatalf("stmt is not ast.PrefixExpression. got=%T", stmt.Expression)
+		}
+
+		if exp.Operator != tt.ope {
+			t.Fatalf("exp.Operator is not '%s'. got=%s", tt.ope, exp.Operator)
+		}
+
+		if !testIntegerLiteral(t, exp.Right, tt.integerV) {
+			return
+		}
+
+	}
+
+}
+
+func testIntegerLiteral(t *testing.T, il ast.Expression, v int64) bool {
+	integ, ok := il.(*ast.IntegerLiteral)
+	if !ok {
+		t.Errorf("il not *ast.IntegerLIteral. got=%T", il)
+		return false
+	}
+
+	if integ.Value != v {
+		t.Errorf("integ.Value not %d. got=%d", v, integ.Value)
+	}
+
+	if integ.TokenLiteral() != fmt.Sprintf("%d", v) {
+		t.Errorf("integ.TokenLIteral not %d. got=%s", v, integ.TokenLiteral())
+		return false
+	}
+	return true
 }
