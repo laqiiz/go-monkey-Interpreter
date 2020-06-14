@@ -13,15 +13,14 @@ func TestLetStatements(t *testing.T) {
 let x = 5;
 let y = 10;
 let foobar = 838383;
-
 `
 
 	p := New(lexer.New(in))
-
 	pgm := p.ParseProgram()
 	checkParserErrors(t, p)
 
 	if len(pgm.Statements) != 3 {
+		t.Logf("pgm.Statements: %+v", pgm.String())
 		t.Fatalf("program.Statements does not countain 3 statements got=%d", len(pgm.Statements))
 	}
 
@@ -97,15 +96,44 @@ return 993322;
 		t.Fatalf("program.Statements does not countain 3 statements got=%d", len(pgm.Statements))
 	}
 
-for _, stmt := range pgm.Statements {
-	returnStmt, ok := stmt.(*ast.ReturnStatement)
-	if !ok {
-		t.Errorf("stmt not *ast.returnStatement. got=%T", stmt)
-	}
-	if returnStmt.TokenLiteral() != "return" {
-		t.Errorf("returnStmt.TokenLiteral not 'return' go %q", returnStmt.TokenLiteral())
+	for _, stmt := range pgm.Statements {
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("stmt not *ast.returnStatement. got=%T", stmt)
+		}
+		if returnStmt.TokenLiteral() != "return" {
+			t.Errorf("returnStmt.TokenLiteral not 'return' go %q", returnStmt.TokenLiteral())
+		}
 	}
 }
 
+func TestIdentifierExpression(t *testing.T) {
+	in := "foobar;"
+
+	p := New(lexer.New(in))
+
+	pgm := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(pgm.Statements) != 1 {
+		t.Fatalf("program.Statements does not enough statemetns. got=%d", len(pgm.Statements))
+	}
+	stmt, ok := pgm.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("exp not *ast.Identifier. go=%T", stmt.Expression)
+	}
+
+	ident, ok := stmt.Expression.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("exp not *ast.Identifier. got=%T", stmt.Expression)
+	}
+
+	if ident.Value != "foobar" {
+		t.Errorf("ident.Value not %s. got=%s", "foobar", ident.Value)
+	}
+
+	if ident.TokenLiteral() != "foobar" {
+		t.Errorf("ident.TokenLiteral not %s. got=%s", "foobar", ident.TokenLiteral())
+	}
 
 }

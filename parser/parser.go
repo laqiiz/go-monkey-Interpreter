@@ -7,12 +7,26 @@ import (
 	"github.com/laqiiz/go-monkey-Interpreter/token"
 )
 
-type Parser struct {
-	l         *lexer.Lexer // 字句解析器インスタンスへのポインタ
-	curToken  token.Token  // 現在のトークン
-	peekToken token.Token  // 次のトークン(curTokenで不足時にはpeekTokenを用いる）
+const (
+	_ int = iota // 計算の優先度を示す
+	LOWEST
+	EQUALS      // ==
+	LESSGREATER // > または <
+	SUM         // +
+	PRODUCT     // *
+	PREFIX      // -X まはた !X
+	CALL        // myFunction()
+)
 
+type Parser struct {
+	l      *lexer.Lexer // 字句解析器インスタンスへのポインタ
 	errors []string
+
+	curToken  token.Token // 現在のトークン
+	peekToken token.Token // 次のトークン(curTokenで不足時にはpeekTokenを用いる）
+
+	prefixParseFns map[token.Type]prefixParseFn
+	infixParseFns  map[token.Type]infixParseFn
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -20,6 +34,9 @@ func New(l *lexer.Lexer) *Parser {
 		l:      l,
 		errors: []string{},
 	}
+
+	p.prefixParseFns= make(map[token.Type]prefixParseFn)
+	p.registerPrefix(token.IDENT, p.parseIdentifier)
 
 	p.nextToken()
 	p.nextToken()
@@ -58,7 +75,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 }
 
@@ -123,4 +140,44 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 		}
 	}
 	return stmt
+}
+
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn  func(ast.Expression) ast.Expression
+)
+
+func (p *Parser) registerPrefix(tt token.Type, fn prefixParseFn) {
+	p.prefixParseFns[tt] = fn
+}
+
+func (p *Parser) registerInfix(tt token.Type, fn infixParseFn) {
+	p.infixParseFns[tt] = fn
+}
+
+func (p *Parser) parseExpressionStatement() ast.Statement {
+	stmt := &ast.ExpressionStatement{
+		Token: p.curToken,
+	}
+	stmt.Expression = p.ParseExpression(LOWEST)
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return stmt
+}
+
+func (p *Parser) ParseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFns[p.curToken.Type]
+	if prefix == nil {
+		return nil
+	}
+	leftExp := prefix()
+	return leftExp
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{
+		Token: p.curToken,
+		Value: p.curToken.Literal,
+	}
 }
