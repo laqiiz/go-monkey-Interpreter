@@ -5,6 +5,7 @@ import (
 	"github.com/laqiiz/go-monkey-Interpreter/ast"
 	"github.com/laqiiz/go-monkey-Interpreter/lexer"
 	"github.com/laqiiz/go-monkey-Interpreter/token"
+	"strconv"
 )
 
 const (
@@ -37,6 +38,7 @@ func New(l *lexer.Lexer) *Parser {
 
 	p.prefixParseFns= make(map[token.Type]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 
 	p.nextToken()
 	p.nextToken()
@@ -97,7 +99,7 @@ func (p *Parser) parseLetStatement() ast.Statement {
 		return nil
 	}
 
-	//TODO セミコロンに遭遇するまで四季を読み飛ばしている
+	//TODO セミコロンに遭遇するまで式を読み飛ばしている
 	if !p.curTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
@@ -134,10 +136,10 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 	for !p.curTokenIs(token.SEMICOLON) {
 		p.nextToken()
 
-		if p.curTokenIs(token.EOF) {
-			p.peekError(token.SEMICOLON) // セミコロンが存在しない
-			return stmt
-		}
+		//if p.curTokenIs(token.EOF) {
+		//	p.peekError(token.SEMICOLON) // セミコロンが存在しない
+		//	return stmt
+		//}
 	}
 	return stmt
 }
@@ -180,4 +182,19 @@ func (p *Parser) parseIdentifier() ast.Expression {
 		Token: p.curToken,
 		Value: p.curToken.Literal,
 	}
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	lit := &ast.IntegerLiteral{
+		Token: p.curToken,
+	}
+
+	v, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	lit.Value = v
+	return lit
 }
