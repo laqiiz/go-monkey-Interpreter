@@ -10,9 +10,9 @@ import (
 func TestLetStatements(t *testing.T) {
 	in := `
 
-let x = 5;
-let y = 10;
-let foobar = 838383;
+let x = 5
+let y = 10
+let foobar = 838383
 `
 
 	p := New(lexer.New(in))
@@ -172,10 +172,12 @@ func TestParsingPrefixExpressions(t *testing.T) {
 	prefixTests := []struct {
 		in       string
 		ope      string
-		integerV int64
+		integerV interface{}
 	}{
-		{"!5;", "!", 5},
-		{"-15", "-", 15},
+		{"!5;", "!", int64(5)},
+		{"-15", "-", int64(15)},
+		{"!true;", "!", true},
+		{"!false;", "!", false},
 	}
 
 	for _, tt := range prefixTests {
@@ -202,15 +204,24 @@ func TestParsingPrefixExpressions(t *testing.T) {
 			t.Fatalf("exp.Operator is not '%s'. got=%s", tt.ope, exp.Operator)
 		}
 
-		if !testIntegerLiteral(t, exp.Right, tt.integerV) {
-			return
+		switch tt.integerV.(type) {
+		case int64:
+			if !testIntegerLiteral(t, exp.Right, tt.integerV) {
+				return
+			}
+		case bool:
+			if !testBooleanLiteral(t, exp.Right, tt.integerV.(bool)) {
+				return
+			}
 		}
 
 	}
 
 }
 
-func testIntegerLiteral(t *testing.T, il ast.Expression, v int64) bool {
+func testIntegerLiteral(t *testing.T, il ast.Expression, v interface{}) bool {
+	t.Helper() // helper
+
 	integ, ok := il.(*ast.IntegerLiteral)
 	if !ok {
 		t.Errorf("il not *ast.IntegerLIteral. got=%T", il)
@@ -277,12 +288,11 @@ func TestParsingInfixExpressions(t *testing.T) {
 	}
 }
 
-
 func TestOperatorPrecedenceParsing(t *testing.T) {
 	tests := []struct {
-		in string
+		in   string
 		want string
-	} {
+	}{
 		{
 			"-a * b",
 			"((-a) * b)",
@@ -294,6 +304,18 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 		{
 			"3 + 4 * 5 == 3 * 1 + 4 * 5",
 			"((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+		},
+		{
+			"true",
+			"true",
+		},
+		{"false",
+			"false",
+		},
+		{"3 > 5 == false",
+			"((3 > 5) == false)",
+		}, {"3 < 5 == true",
+			"((3 < 5) == true)",
 		},
 	}
 
@@ -307,4 +329,100 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			t.Errorf("want=%q, got=%q", tt.want, got)
 		}
 	}
+}
+
+func testIdentifier(t *testing.T, exp ast.Expression, v string) bool {
+	ident, ok := exp.(*ast.Identifier)
+	if !ok {
+		t.Errorf("exp not *ast.Identifier. got=%T", exp)
+		return false
+	}
+
+	if ident.Value != v {
+		t.Errorf("ident.Value not %s. got=%s", v, ident.Value)
+		return false
+	}
+
+	if ident.TokenLiteral() != v {
+		t.Errorf("ident.TokenLiteral not %s. got=%s", v, ident.TokenLiteral())
+	}
+
+	return true
+}
+
+func testLiteralExpression(t *testing.T, exp ast.Expression, want interface{}) bool {
+	switch v := want.(type) {
+	case int:
+		return testIntegerLiteral(t, exp, int64(v))
+	case int64:
+		return testIntegerLiteral(t, exp, v)
+	case string:
+		return testIdentifier(t, exp, v)
+	case bool:
+		return testBooleanLiteral(t, exp, v)
+	}
+
+	t.Errorf("type of exp not handled. got=%T", exp)
+
+	return false
+}
+
+func testBooleanLiteral(t *testing.T, exp ast.Expression, v bool) bool {
+	bo, ok := exp.(*ast.Boolean)
+	if !ok {
+		t.Errorf("exp not *ast.Booealn. got=%T", exp)
+		return false
+	}
+
+	if bo.Value != v {
+		t.Errorf("bo.Value not %t. got==%t", v, bo.Value)
+		return false
+	}
+
+	if bo.TokenLiteral() != fmt.Sprintf("%t", v) {
+		t.Errorf("bo.TokenLiteral not %t. got=%s", v, bo.TokenLiteral())
+		return false
+	}
+	return true
+
+}
+
+func testInfixExpression(t *testing.T, exp ast.Expression, left interface{}, ope string, right interface{}) bool {
+	opExp, ok := exp.(*ast.InfixExpression)
+	if !ok {
+		t.Errorf("exp is not ast.InfixExpression. got=%T(%s)", exp, exp)
+		return false
+	}
+
+	if !testLiteralExpression(t, opExp.Left, left) {
+		return false
+	}
+	if opExp.Operator != ope {
+		t.Errorf("exp.Operator is not '%s'. got=%q", ope, opExp.Operator)
+		return false
+	}
+	if !testLiteralExpression(t, opExp.Left, left) {
+		return false
+	}
+
+	if opExp.Operator != ope {
+		t.Errorf("exp.Operator is not '%s'. got=%q", ope, opExp.Operator)
+		return false
+	}
+
+	if !testLiteralExpression(t, opExp.Right, right) {
+		return false
+	}
+	return true
+
+}
+
+func TestBoolExpression(t *testing.T) {
+	//TODO 省略
+	//	in := `
+	//true;
+	//false;
+	//let boobar = true;
+	//let barfoo = false;
+	//`
 }
